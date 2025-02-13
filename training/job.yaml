@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: model-training-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: training-container
+        image: ljh415/resnet_training:latest
+        resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+      restartPolicy: Never
