@@ -11,7 +11,8 @@ def main():
     epochs = args.epochs
     batch_size = args.batch_size
     lr = args.lr
-    save_path = os.path.join(args.save_path, "trained_model.pt")
+    data_save_dir = os.path.join(args.save_path, "data")
+    model_save_path = os.path.join(args.save_path, "models", "trained_model.pt")
     
     transform = transforms.Compose([
         transforms.Grayscale(num_output_channels=3),
@@ -20,14 +21,13 @@ def main():
     ])
     
     print("Preparing Dataset..")
-    train_dataset = torchvision.datasets.MNIST(root="./data", train=True, transform=transform, download=True)
-    test_dataset = torchvision.datasets.MNIST(root="./data", train=False, transform=transform, download=True)
+    train_dataset = torchvision.datasets.MNIST(root=data_save_dir, train=True, transform=transform, download=True)
+    test_dataset = torchvision.datasets.MNIST(root=data_save_dir, train=False, transform=transform, download=True)
 
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
     print("Model Initialize..")
-    # device = torch.device("cpu")  # Only cpu
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = resnet18(weights=ResNet18_Weights.DEFAULT)
     model.fc = nn.Linear(512, 10)
@@ -43,8 +43,8 @@ def main():
         
         print(f"Epoch [{epoch+1}/{epochs}], Loss: {train_loss:.4f}, Accuracy: {accuracy:.4f}")
     
-    torch.save(model.state_dict(), save_path)
-    print(f"Model saved to {save_path}")
+    torch.save(model.state_dict(), model_save_path)
+    print(f"Model saved to {model_save_path}")
 
 def train(model, train_dataloader, criterion, optimizer, device):
     
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--save-path", type=str, default="./data")
+    parser.add_argument("--save-path", type=str, default="/storage")
     
     args = parser.parse_args()
     
