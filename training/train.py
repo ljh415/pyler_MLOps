@@ -20,14 +20,14 @@ def main():
         transforms.Normalize((0.1307, ), (0.3081, ))
     ])
     
-    print("Preparing Dataset..")
+    print("Preparing Dataset...", flush=True)
     train_dataset = torchvision.datasets.MNIST(root=data_save_dir, train=True, transform=transform, download=True)
     test_dataset = torchvision.datasets.MNIST(root=data_save_dir, train=False, transform=transform, download=True)
 
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
-    print("Model Initialize..")
+    print("Model Initialize..", flush=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = resnet18(weights=ResNet18_Weights.DEFAULT)
     model.fc = nn.Linear(512, 10)
@@ -36,15 +36,16 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
-    print("Start Training..")
+    print("Start Training..", flush=True)
     for epoch in range(epochs):
         train_loss = train(model, train_dataloader, criterion, optimizer, device)
         accuracy = eval(model, test_dataloader, device)
         
-        print(f"Epoch [{epoch+1}/{epochs}], Loss: {train_loss:.4f}, Accuracy: {accuracy:.4f}")
+        print(f"Epoch [{epoch+1}/{epochs}], Loss: {train_loss:.4f}, Accuracy: {accuracy:.4f}", flush=True)
     
+    os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
     torch.save(model.state_dict(), model_save_path)
-    print(f"Model saved to {model_save_path}")
+    print(f"Model saved to {model_save_path}", flush=True)
 
 def train(model, train_dataloader, criterion, optimizer, device):
     
