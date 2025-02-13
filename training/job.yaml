@@ -7,12 +7,20 @@ spec:
     spec:
       containers:
       - name: training-container
-        image: ljh415/resnet_training:latest
+        image: ljh415/resnet_training:v0.0.2
+        imagePullPolicy: IfNotPresent
         resources:
             requests:
-              cpu: "2"
-              memory: "4Gi"
-            limits:
               cpu: "4"
               memory: "8Gi"
+            limits:
+              cpu: "8"
+              memory: "16Gi"
+        volumeMounts:
+          - mountPath: "/storage"
+            name: shared-storage
       restartPolicy: Never
+      volumes:
+        - name: shared-storage
+          persistentVolumeClaim:
+            claimName: shared-storage-pvc
