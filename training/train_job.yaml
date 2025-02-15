@@ -3,12 +3,23 @@ kind: Job
 metadata:
   name: model-training-job
 spec:
+  backoffLimit: 3
   template:
     spec:
       containers:
       - name: training-container
-        image: ljh415/resnet_training:v0.0.5
+        image: ljh415/resnet_training:v0.0.11
         imagePullPolicy: IfNotPresent
+        command: ["python", "train.py"]
+        env:
+          - name: EPOCHS
+            value: "10"
+          - name: BATCH_SIZE
+            value: "64"
+          - name: LR
+            value: "0.001"
+          - name: SAVE_PATH
+            value: "/storage"
         resources:
             requests:
               cpu: "4"
