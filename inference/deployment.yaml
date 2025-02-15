@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: triton-inference
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: triton-inference
+  template:
+    metadata:
+      labels:
+        app: triton-inference
+    spec:
+      containers:
+      - name: triton
+        image: nvcr.io/nvidia/tritonserver:23.04-py3  # 서버환경과 비슷한 셋팅
+        args: ["tritonserver", "--model-repository=/storage/models", "--strict-model-config=false"]
+        ports:
+          - containerPort: 8000    # HTTP REST API
+          - containerPort: 8001    # gRPC API
+          - containerPort: 8002    # Metrics API
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+        volumeMounts:
+          - mountPath: "/storage"
+            name: model-storage  # PVC
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: shared-storage-pvc
