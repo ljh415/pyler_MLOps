@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: model-export-job
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      containers:
+      - name: export-container
+        image: ljh415/resnet_training:v0.0.11
+        command: ["python", "export.py"]
+        env:
+          - name: SAVE_PATH
+            value: "/storage"
+          - name: EXPORT_TYPE
+            value: "onnx"
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+        volumeMounts:
+          - mountPath: "/storage"
+            name: shared-storage
+      restartPolicy: Never
+      volumes:
+        - name: shared-storage
+          persistentVolumeClaim:
+            claimName: shared-storage-pvc
