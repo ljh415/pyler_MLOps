@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grpc-client-job
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      containers:
+      - name: grpc-client-container
+        image: ljh415/grpc_client:v0.0.2
+        command: ["python",  "client.py"]
+        resources:
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+      restartPolicy: Never
