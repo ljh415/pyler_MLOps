@@ -8,14 +8,17 @@ import torchvision.transforms as transforms
 from torchvision.models import resnet18, ResNet18_Weights
 
 def main():
-    epochs = args.epochs
-    batch_size = args.batch_size
-    lr = args.lr
-    data_save_dir = os.path.join(args.save_path, "data")
-    model_save_path = os.path.join(args.save_path, "models", "trained_model.pt")
+    ## init arguments, path
+    epochs = int(os.environ.get("EPOCHS", 10))
+    batch_size = int(os.environ.get("BATCH_SIZE", 64))
+    lr = float(os.environ.get("LR", 1e-3))
+    save_path = os.environ.get("SAVE_PATH", "/storage")
+    
+    data_save_dir = os.path.join(save_path, "data")
+    model_save_path = os.path.join(save_path, "model.pth")
     
     transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=3),
+        transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
         transforms.Normalize((0.1307, ), (0.3081, ))
     ])
@@ -30,6 +33,7 @@ def main():
     print("Model Initialize..", flush=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = resnet18(weights=ResNet18_Weights.DEFAULT)
+    model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
     model.fc = nn.Linear(512, 10)
     model = model.to(device)
     
@@ -44,9 +48,8 @@ def main():
         print(f"Epoch [{epoch+1}/{epochs}], Loss: {train_loss:.4f}, Accuracy: {accuracy:.4f}", flush=True)
     
     os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
-    torch.save(model.state_dict(), model_save_path)
-    print(f"Model saved to {model_save_path}", flush=True)
-
+    torch.save(model, model_save_path)
+    
 def train(model, train_dataloader, criterion, optimizer, device):
     
     model.train()
@@ -78,16 +81,5 @@ def eval(model, test_dataloader, device):
     
     return correct / total
 
-
 if __name__ == "__main__":
-    import argparse
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--save-path", type=str, default="/storage")
-    
-    args = parser.parse_args()
-    
     main()
