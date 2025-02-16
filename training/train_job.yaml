@@ -3,12 +3,13 @@ kind: Job
 metadata:
   name: model-training-job
 spec:
+  ttlSecondsAfterFinished: 86400
   backoffLimit: 3
   template:
     spec:
       containers:
       - name: training-container
-        image: ljh415/resnet_training:v0.0.11
+        image: ljh415/resnet_training:v0.0.19
         imagePullPolicy: IfNotPresent
         command: ["python", "train.py"]
         env:

@@ -3,12 +3,13 @@ kind: Job
 metadata:
   name: model-export-job
 spec:
+  ttlSecondsAfterFinished: 86400
   backoffLimit: 3
   template:
     spec:
       containers:
       - name: export-container
-        image: ljh415/resnet_training:v0.0.11
+        image: ljh415/resnet_training:v0.0.19
         command: ["python", "export.py"]
         env:
           - name: SAVE_PATH
