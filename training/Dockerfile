@@ -14,3 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY train.py /app/
 COPY export.py /app/
+COPY export_utils.py /app/
