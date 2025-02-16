@@ -1,4 +1,6 @@
 import os
+import logging
+import datetime
 
 import torch
 import torch.nn as nn
@@ -12,10 +14,18 @@ def main():
     epochs = int(os.environ.get("EPOCHS", 10))
     batch_size = int(os.environ.get("BATCH_SIZE", 64))
     lr = float(os.environ.get("LR", 1e-3))
-    save_path = os.environ.get("SAVE_PATH", "/storage")
+    root_save_dir = os.environ.get("SAVE_PATH", "/storage")
     
-    data_save_dir = os.path.join(save_path, "data")
-    model_save_path = os.path.join(save_path, "model.pth")
+    data_save_dir = os.path.join(root_save_dir, "data")
+        
+    ## timestamp
+    timestamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
+    
+    ## logging
+    log_file = os.path.join(root_save_dir, "logs", timestamp, f"train.log")
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    logging.basicConfig(filename=log_file, level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    logger = logging.getLogger()
     
     transform = transforms.Compose([
         transforms.Grayscale(num_output_channels=1),
@@ -23,14 +33,16 @@ def main():
         transforms.Normalize((0.1307, ), (0.3081, ))
     ])
     
-    print("Preparing Dataset...", flush=True)
+    # print("Preparing Dataset...", flush=True)
+    logger.info("Preparing Dataset...")
     train_dataset = torchvision.datasets.MNIST(root=data_save_dir, train=True, transform=transform, download=True)
     test_dataset = torchvision.datasets.MNIST(root=data_save_dir, train=False, transform=transform, download=True)
 
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
-    print("Model Initialize..", flush=True)
+    # print("Model Initialize..", flush=True)
+    logger.info("Model Initialize..")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = resnet18(weights=ResNet18_Weights.DEFAULT)
     model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -40,15 +52,25 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
-    print("Start Training..", flush=True)
+    # print("Start Training..", flush=True)
+    logger.info("Start Training..")
     for epoch in range(epochs):
         train_loss = train(model, train_dataloader, criterion, optimizer, device)
         accuracy = eval(model, test_dataloader, device)
         
-        print(f"Epoch [{epoch+1}/{epochs}], Loss: {train_loss:.4f}, Accuracy: {accuracy:.4f}", flush=True)
+        # print(f"Epoch [{epoch+1}/{epochs}], Loss: {train_loss:.4f}, Accuracy: {accuracy:.4f}", flush=True)
+        logger.info(f"Epoch [{epoch+1}/{epochs}], Loss: {train_loss:.4f}, Accuracy: {accuracy:.4f}")
     
+    ## test
+    final_test_acc = eval(model, test_dataloader, device)
+    logger.info(f"Final Test Accuracy: {final_test_acc:.4f}")
+    
+    ## save
+    model_filename = f"model_{timestamp}_{final_test_acc:.4f}.pth"
+    model_save_path = os.path.join(root_save_dir, "torch_models", model_filename)
     os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
     torch.save(model, model_save_path)
+    logger.info(f"Model saved at {model_save_path}")
     
 def train(model, train_dataloader, criterion, optimizer, device):
     
