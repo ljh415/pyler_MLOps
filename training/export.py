@@ -1,11 +1,12 @@
 import os
+import json
 import logging
 
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18
 
-from export_utils import find_best_model, update_best_model_symlink, get_model_info, get_next_model_version, add_metadata_to_onnx
+from export_utils import find_best_model, update_best_model_symlink, get_model_info, get_next_model_version
 
 def export(target_type):
     save_path = os.environ.get("SAVE_PATH", "/storage")
@@ -79,7 +80,12 @@ def export(target_type):
             "accuracy": model_acc,
             "source_model": target_model_path
         }
-        add_metadata_to_onnx(onnx_save_path, model_metadata)
+        
+        metadata_path = os.path.join(os.path.dirname(onnx_save_path), "metadata.json")
+        
+        with open(metadata_path, "w") as f:
+            json.dump(model_metadata, f, indent=4)
+        logger.info(f"Metadata saved to {metadata_path}")
         
     else :
         raise Exception("Not supported export type")

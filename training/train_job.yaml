@@ -9,7 +9,7 @@ spec:
     spec:
       containers:
       - name: training-container
-        image: ljh415/resnet_training:v0.0.19
+        image: ljh415/resnet_training:v0.0.22
         imagePullPolicy: IfNotPresent
         command: ["python", "train.py"]
         env:

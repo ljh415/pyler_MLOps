@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
       - name: grpc-client-container
-        image: ljh415/grpc_client:v0.0.2
+        image: ljh415/grpc_client:v0.0.11
         command: ["python",  "client.py"]
         resources:
           requests:
@@ -17,4 +17,11 @@ spec:
           limits:
             cpu: "2"
             memory: "4Gi"
+        volumeMounts:
+          - mountPath: "/storage"
+            name: shared-storage
       restartPolicy: Never
+      volumes:
+        - name: shared-storage
+          persistentVolumeClaim:
+            claimName: shared-storage-pvc
