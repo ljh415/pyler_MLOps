@@ -2,8 +2,6 @@ import os
 import re
 from glob import glob
 
-import onnx
-
 def get_model_info(model_path):
     match = re.match(r"model_(\d{6}-\d{4})_(\d+\.\d+)\.pth", os.path.basename(model_path))
     if match:
@@ -55,15 +53,3 @@ def get_next_model_version(model_base_path):
         return "1"
     
     return str(max(existing_versions) + 1)
-
-def add_metadata_to_onnx(onnx_path, metadata):
-    if not os.path.exists(onnx_path):
-        raise FileNotFoundError(f"ONNX file not found: {onnx_path}")
-    
-    model = onnx.load(onnx_path)
-    
-    for key, value in metadata.items():
-        entry = onnx.StringStringEntryProto(key=key, value=str(value))
-        model.metadata_props.append(entry)
-    
-    onnx.save(model, onnx_path)
