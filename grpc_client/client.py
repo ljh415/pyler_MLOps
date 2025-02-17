@@ -87,7 +87,6 @@ def get_image(input_shape:list, input_dtype:str):
     return np.random.rand(*input_shape).astype(np_dtype)
 
 async def async_inference():
-    global logger
     log_messages = []
     try:
         client = await async_init_connection(log_messages)
