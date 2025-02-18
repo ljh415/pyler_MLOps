@@ -9,7 +9,7 @@ spec:
     spec:
       containers:
       - name: export-container
-        image: ljh415/resnet_training:v0.0.22
+        image: ljh415/resnet_training:v0.0.24
         command: ["python", "export.py"]
         env:
           - name: SAVE_PATH
