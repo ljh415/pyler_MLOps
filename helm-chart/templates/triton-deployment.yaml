@@ -20,7 +20,7 @@ spec:
             - |
               echo "Waiting for Export Job to complete..."
               while true; do
-                status=$(kubectl get job helm-test-export-job -o jsonpath='{.status.succeeded}' --namespace pyler-jh-helm 2>/dev/null || echo "0")
+                status=$(kubectl get job helm-test-export-job -o jsonpath='{.status.succeeded}' --namespace {{ .Release.Namespace }}-jh-helm 2>/dev/null || echo "0")
                 if [ -z "$status" ] || [ "$status" = "null" ]; then
                   status=0
                 fi
