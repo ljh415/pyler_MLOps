@@ -1,27 +1,24 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: v1
+kind: Pod
 metadata:
-  name: grpc-client-job
+  name: grpc-client
 spec:
-  backoffLimit: 3
-  template:
-    spec:
-      containers:
-      - name: grpc-client-container
-        image: ljh415/grpc_client:v0.0.11
-        command: ["python",  "client.py"]
-        resources:
-          requests:
-            cpu: "1"
-            memory: "2Gi"
-          limits:
-            cpu: "2"
-            memory: "4Gi"
-        volumeMounts:
-          - mountPath: "/storage"
-            name: shared-storage
-      restartPolicy: Never
-      volumes:
-        - name: shared-storage
-          persistentVolumeClaim:
-            claimName: shared-storage-pvc
+  restartPolicy: Always
+  containers:
+  - name: grpc-client-container
+    image: ljh415/grpc_client:v0.0.11
+    command: ["python",  "client.py"]
+    resources:
+      requests:
+        cpu: "1"
+        memory: "2Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+    volumeMounts:
+      - mountPath: "/storage"
+        name: shared-storage
+  volumes:
+    - name: shared-storage
+      persistentVolumeClaim:
+        claimName: shared-storage-pvc
