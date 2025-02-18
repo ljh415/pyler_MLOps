@@ -1,5 +1,7 @@
 # 사전과제
 
+각 컴포넌트별 설명 : [링크](COMPONENTS.md)
+
 ## 1. Overeall Architecutre
 ![architecutre](images/architecture.png)
 
