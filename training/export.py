@@ -6,12 +6,15 @@ import torch
 import torch.nn as nn
 from torchvision.models import resnet18
 
-from export_utils import find_best_model, update_best_model_symlink, get_model_info, get_next_model_version
+from export_utils import find_best_model, update_best_model_symlink, get_model_info,\
+    get_next_model_version, generate_triton_config
+
+MODEL_NAME = "resnet18_mnist"
 
 def export(target_type):
     save_path = os.environ.get("SAVE_PATH", "/storage")
     model_dir = os.path.join(save_path, "torch_models")
-    model_repo_path = os.path.join(save_path, "models", "resnet18_mnist")
+    model_repo_path = os.path.join(save_path, "models", MODEL_NAME)
     os.makedirs(model_repo_path, exist_ok=True)
 
     log_messages = []
@@ -75,6 +78,17 @@ def export(target_type):
         )
         logger.info(f"ONNX Model saved to {onnx_save_path}")
         
+        ## config.pbtxt
+        config_pbtxt = generate_triton_config(
+            model_path=onnx_save_path,
+            model_name=MODEL_NAME,
+        )
+        config_path = os.path.join(model_repo_path, "config.pbtxt")
+        with open(config_path, "w") as f:
+            f.write(config_pbtxt)
+        logger.info(f"config.pbtxt saved to {config_path}")
+        
+        ## metadata
         model_metadata = {
             "export_date": model_timestamp,
             "accuracy": model_acc,

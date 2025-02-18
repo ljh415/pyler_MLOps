@@ -2,6 +2,26 @@ import os
 import re
 from glob import glob
 
+import onnx
+
+ONNX_TO_TRITON_DTYPE = {
+    1: "TYPE_FP32",    # ONNX FLOAT -> Triton TYPE_FP32
+    2: "TYPE_UINT8",
+    3: "TYPE_INT8",
+    4: "TYPE_UINT16",
+    5: "TYPE_INT16",
+    6: "TYPE_INT32",
+    7: "TYPE_INT64",
+    9: "TYPE_BOOL",
+    10: "TYPE_FP16",   # ONNX FLOAT16 -> Triton TYPE_FP16
+    11: "TYPE_FP32",   # ONNX FLOAT32 -> Triton TYPE_FP32
+    12: "TYPE_FP64",   # ONNX FLOAT64 -> Triton TYPE_FP64
+    13: "TYPE_UINT32",
+    14: "TYPE_UINT64",
+    15: "TYPE_COMPLEX64",
+    16: "TYPE_COMPLEX128",
+}
+
 def get_model_info(model_path):
     match = re.match(r"model_(\d{6}-\d{4})_(\d+\.\d+)\.pth", os.path.basename(model_path))
     if match:
@@ -53,3 +73,81 @@ def get_next_model_version(model_base_path):
         return "1"
     
     return str(max(existing_versions) + 1)
+
+def generate_triton_config(
+    model_path: str,
+    model_name: str = "resnet18_mnist",
+    max_batch_size: int = 16,
+    instance_count: int = 1,
+    preferred_batch_sizes: list = [2, 4, 8]
+):
+
+    model = onnx.load(model_path)
+    graph = model.graph
+
+    # ✅ 배치 차원을 제외한 입력 및 출력 노드 정보 추출
+    inputs = []
+    for inp in graph.input:
+        dtype = inp.type.tensor_type.elem_type  # ONNX 데이터 타입
+        triton_dtype = ONNX_TO_TRITON_DTYPE.get(dtype, "TYPE_FP32")  # Triton 데이터 타입 변환
+
+        dims = [d.dim_value if d.dim_value > 0 else -1 for d in inp.type.tensor_type.shape.dim]
+
+        # ✅ 배치 차원 제거 (첫 번째 차원)
+        if len(dims) > 1:
+            dims = dims[1:]
+
+        inputs.append(f"""
+    {{
+        name: "{inp.name}"
+        data_type: {triton_dtype}
+        dims: {dims}
+    }}""")
+
+    outputs = []
+    for out in graph.output:
+        dtype = out.type.tensor_type.elem_type  # ONNX 데이터 타입
+        triton_dtype = ONNX_TO_TRITON_DTYPE.get(dtype, "TYPE_FP32")  # Triton 데이터 타입 변환
+
+        dims = [d.dim_value if d.dim_value > 0 else -1 for d in out.type.tensor_type.shape.dim]
+
+        # ✅ 배치 차원 제거 (첫 번째 차원)
+        if len(dims) > 1:
+            dims = dims[1:]
+
+        outputs.append(f"""
+    {{
+        name: "{out.name}"
+        data_type: {triton_dtype}
+        dims: {dims}
+    }}""")
+
+    config_pbtxt = f"""
+name: "{model_name}"
+platform: "onnxruntime_onnx"
+max_batch_size: {max_batch_size}
+
+input [{",".join(inputs)}
+]
+
+output [{",".join(outputs)}
+]
+
+instance_group [
+    {{
+        count: {instance_count}
+        kind: KIND_CPU
+    }}
+]
+
+dynamic_batching {{
+    preferred_batch_size: {preferred_batch_sizes}
+}}
+
+optimization {{
+    input_pinned_memory {{ enable: true }}
+    output_pinned_memory {{ enable: true }}
+}}
+"""
+
+    return config_pbtxt
