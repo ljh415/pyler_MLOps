@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-export-job
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+      - name: wait-for-training
+        image: bitnami/kubectl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Waiting for Training Job to complete..."
+            while true; do
+              status=$(kubectl get job helm-test-training-job -o jsonpath='{.status.succeeded}' --namespace pyler-jh-helm 2>/dev/null || echo "0")
+              if [ -z "$status" ] || [ "$status" = "null" ]; then
+                status=0
+              fi
+              status_int=$(expr "$status" + 0)  # 문자열을 정수로 변환
+              echo "Current status: $status_int"  # 디버깅 로그
+              if [ "$status_int" -ge 1 ]; then
+                echo "Training Job completed!"
+                exit 0  # 🔹 컨테이너 종료
+              fi
+              echo "Training still running, waiting..."
+              sleep 5
+            done
+      containers:
+      - name: export-container
+        image: "{{ .Values.image.train_export.repository }}:{{ .Values.image.train_export.tag }}"
+        command: ["python", "export.py"]
+        env:
+          - name: SAVE_PATH
+            value: "{{ .Values.resources.export.env.savePath }}"
+          - name: EXPORT_TYPE
+            value: "{{ .Values.resources.export.env.exportType }}"
+        resources:
+          requests:
+            cpu: {{ .Values.resources.export.requests.cpu }}
+            memory: {{ .Values.resources.export.requests.memory }}
+          limits:
+            cpu: {{ .Values.resources.export.limits.cpu }}
+            memory: {{ .Values.resources.export.limits.memory }}
+        volumeMounts:
+          - mountPath: "/storage"
+            name: shared-storage
+      volumes:
+        - name: shared-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.pvcName }}

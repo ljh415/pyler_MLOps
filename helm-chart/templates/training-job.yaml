@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-training-job
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 3
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-pvc
+          image: bitnami/kubectl:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Waiting for PVC {{ .Values.storage.pvcName }} to be bound..."
+              while [[ $(kubectl get pvc {{ .Values.storage.pvcName }} -o jsonpath='{.status.phase}') != "Bound" ]]; do
+                sleep 5
+              done
+              echo "PVC is bound! Starting training job..."
+      containers:
+        - name: training-container
+          image: "{{ .Values.image.train_export.repository }}:{{ .Values.image.train_export.tag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["python", "train.py"]
+          env:
+            - name: EPOCHS
+              value: "{{ .Values.resources.train.env.epochs }}"
+            - name: BATCH_SIZE
+              value: "{{ .Values.resources.train.env.batchSize }}"
+            - name: LR
+              value: "{{ .Values.resources.train.env.lr }}"
+            - name: SAVE_PATH
+              value: "{{ .Values.resources.train.env.savePath }}"
+          resources:
+            requests:
+              cpu: {{ .Values.resources.train.requests.cpu }}
+              memory: {{ .Values.resources.train.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.train.limits.cpu }}
+              memory: {{ .Values.resources.train.limits.memory }}
+          volumeMounts:
+            - mountPath: "/storage"
+              name: shared-storage
+      restartPolicy: Never
+      volumes:
+        - name: shared-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.pvcName }}

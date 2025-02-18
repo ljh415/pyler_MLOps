@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-grpc-client
+spec:
+  restartPolicy: Always
+  initContainers:
+    - name: wait-for-pvc
+      image: bitnami/kubectl:latest
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo "Waiting for PVC to be ready..."
+          while [[ "$(kubectl get pvc {{ .Values.storage.pvcName }} -o jsonpath='{.status.phase}')" != "Bound" ]]; do
+            sleep 5
+          done
+          echo "PVC is ready! Proceeding to check Triton status..."
+
+    - name: wait-for-triton
+      image: curlimages/curl:latest
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo "Waiting for Triton Inference Server to be fully ready..."
+          while [[ "$(curl -s -o /dev/null -w '%{http_code}' http://triton-service:8000/v2/health/ready)" != "200" ]]; do
+            echo "Triton not ready, retrying in 5 seconds..."
+            sleep 5
+          done
+          echo "Triton Inference Server is fully ready! Starting gRPC Client Pod..."
+
+  containers:
+  - name: grpc-client-container
+    image: "{{ .Values.image.grpc_client.repository }}:{{ .Values.image.grpc_client.tag }}"
+    command: ["python",  "client.py"]
+    resources:
+      requests:
+        cpu: {{ .Values.resources.grpc_client.requests.cpu }}
+        memory: {{ .Values.resources.grpc_client.requests.memory }}
+      limits:
+        cpu: {{ .Values.resources.grpc_client.limits.cpu }}
+        memory: {{ .Values.resources.grpc_client.limits.memory }}
+    volumeMounts:
+      - mountPath: "/storage"
+        name: shared-storage
+  volumes:
+    - name: shared-storage
+      persistentVolumeClaim:
+        claimName: {{ .Values.storage.pvcName }}

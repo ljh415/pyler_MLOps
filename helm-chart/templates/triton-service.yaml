@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: triton-service
+spec:
+  type: ClusterIP
+  selector:
+    app: triton-inference
+  ports:
+    - protocol: TCP
+      port: {{ .Values.triton.http_port }}
+      targetPort: {{ .Values.triton.http_port }}
+      name: http-rest
+    - protocol: TCP
+      port: {{ .Values.triton.grpc_port }}
+      targetPort: {{ .Values.triton.grpc_port }}
+      name: grpc
+    - protocol: TCP
+      port: {{ .Values.triton.metrics_port }}
+      targetPort: {{ .Values.triton.metrics_port }}
+      name: metrics

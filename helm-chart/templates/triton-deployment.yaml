@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-triton-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: triton-inference
+  template:
+    metadata:
+      labels:
+        app: triton-inference
+    spec:
+      initContainers:
+        - name: wait-for-export
+          image: bitnami/kubectl:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Waiting for Export Job to complete..."
+              while true; do
+                status=$(kubectl get job helm-test-export-job -o jsonpath='{.status.succeeded}' --namespace pyler-jh-helm 2>/dev/null || echo "0")
+                if [ -z "$status" ] || [ "$status" = "null" ]; then
+                  status=0
+                fi
+                echo "Current status: $status"
+                if [ "$status" -eq 1 ]; then  # ✅ [[ ... ]] 대신 [ ... ] 사용
+                  echo "Export Job completed!"
+                  exit 0
+                fi
+                echo "Export Job still running, waiting..."
+                sleep 5
+              done
+      containers:
+      - name: triton
+        image: "{{ .Values.image.triton.repository }}:{{ .Values.image.triton.tag }}"
+        args: ["tritonserver", "--model-repository=/storage/models", "--strict-model-config=false"]
+        ports:
+          - containerPort: {{ .Values.triton.http_port }}    # HTTP REST API
+          - containerPort: {{ .Values.triton.grpc_port }}    # gRPC API
+          - containerPort: {{ .Values.triton.metrics_port }}    # Metrics API
+        resources:
+          requests:
+            cpu: {{ .Values.resources.triton.requests.cpu }}
+            memory: {{ .Values.resources.triton.requests.memory}}
+          limits:
+            cpu: {{ .Values.resources.triton.limits.cpu }}
+            memory: {{ .Values.resources.triton.limits.memory }}
+        volumeMounts:
+          - mountPath: "/storage"
+            name: shared-storage  # PVC
+      volumes:
+        - name: shared-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.pvcName }}
