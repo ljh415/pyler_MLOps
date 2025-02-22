@@ -31,7 +31,10 @@ spec:
   containers:
   - name: grpc-client-container
     image: "{{ .Values.image.grpc_client.repository }}:{{ .Values.image.grpc_client.tag }}"
-    command: ["python",  "client.py"]
+    # command: ["python",  "client.py"]
+    command: ["/bin/sh", "-c"]
+    args:
+      - "python client.py && sleep infinity"
     resources:
       requests:
         cpu: {{ .Values.resources.grpc_client.requests.cpu }}
